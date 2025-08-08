@@ -1,0 +1,16 @@
+node_modules/
+npm-depug.log*
+pnpm-lock.yaml
+yarn.lock
+
+dist/
+.vite/
+.cache/
+
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
