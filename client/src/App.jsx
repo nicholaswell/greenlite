@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
 
+import Dashboard from './pages/DashboardPage';
 import CalendarPage from './pages/CalendarPage';
 import JournalPage  from './pages/JournalPage';
 import JobsPage     from './pages/JobsPage';

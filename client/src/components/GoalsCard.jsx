@@ -34,14 +34,13 @@ export default function GoalsCard() {
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, flex: 1, overflowY: 'auto' }}>
         {items.map(g => (
           <li key={g._id} style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
               <input
                 type="checkbox"
                 checked={g.completed}
                 onChange={() => toggle(g)}
               />
-              {' '}
-              {g.title}
+              <span style={{ marginLeft: 15 }}>{g.title}</span>
               {g.dueDate && (
                 <small style={{ marginLeft: 8 }}>
                   (due {new Date(g.dueDate).toLocaleDateString()})

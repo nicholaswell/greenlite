@@ -3,7 +3,8 @@ import { getEvents, createEvent, deleteEvent } from '../api/events';
 
 export default function EventsCard() {
   const [items, setItems] = useState([]);
-  const [text,  setText]  = useState('');
+  const [text, setText] = useState('');
+  const [date, setDate] = useState('');
 
   useEffect(() => {
     getEvents().then(data => {
@@ -13,8 +14,10 @@ export default function EventsCard() {
       tomorrow.setDate(now.getDate() + 1);
       const filtered = data.filter(e => {
         const d = new Date(e.start);
-        return d.toDateString() === now.toDateString()
-            || d.toDateString() === tomorrow.toDateString();
+        return (
+          d.toDateString() === now.toDateString() ||
+          d.toDateString() === tomorrow.toDateString()
+        );
       });
       setItems(filtered);
     });
@@ -22,9 +25,11 @@ export default function EventsCard() {
 
   const add = async () => {
     if (!text.trim()) return;
-    const newItem = await createEvent({ title: text, start: new Date() });
+    const startDate = date ? new Date(date) : new Date();
+    const newItem = await createEvent({ title: text, start: startDate });
     setItems([newItem, ...items]);
     setText('');
+    setDate('');
   };
 
   const remove = async (id) => {
@@ -35,20 +40,28 @@ export default function EventsCard() {
   return (
     <div className="card">
       <h3>Upcoming</h3>
-      <ul style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}>
+      <ul>
         {items.map(e => (
-          <li key={e._id} style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <li
+            key={e._id}
+            style={{ display: 'flex', justifyContent: 'space-between' }}
+          >
             <span>{new Date(e.start).toLocaleString()} – {e.title}</span>
             <button onClick={() => remove(e._id)}>×</button>
           </li>
         ))}
       </ul>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <input
           style={{ flex: 1 }}
           value={text}
           onChange={e => setText(e.target.value)}
           placeholder="New event…"
+        />
+        <input
+          type="datetime-local"
+          value={date}
+          onChange={e => setDate(e.target.value)}
         />
         <button onClick={add}>Add</button>
       </div>

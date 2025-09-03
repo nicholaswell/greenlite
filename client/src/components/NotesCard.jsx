@@ -32,13 +32,15 @@ export default function NotesCard() {
           </li>
         ))}
       </ul>
-      <input
-        style={{ width: '100%', marginBottom: 8 }}
-        value={note}
-        onChange={e => setNote(e.target.value)}
-        placeholder="Quick note…"
-      />
-      <button onClick={add}>Add Note</button>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          style={{ flex: 1 }}
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          placeholder="Quick note…"
+        />
+        <button onClick={add}>Add Note</button>
+      </div>
     </div>
   );
 }

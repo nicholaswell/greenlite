@@ -1,0 +1,10 @@
+{
+  "name": "greenlite-root",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c green,blue \"npm run dev --prefix server\" \"npm run dev --prefix client\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}

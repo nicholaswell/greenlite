@@ -1,7 +1,22 @@
+// src/components/JournalCard.jsx
 import React, { useState, useEffect } from 'react';
 import { getJournalEntries, createJournalEntry, deleteJournalEntry } from '../api/journal';
 
-export default function JournalCard() {
+export default function JournalCard({ variant = 'full' }) {
+  if (variant === 'compact') {
+    // Dashboard view: no fetching, no save UI, just a link
+    return (
+      <div className="card">
+        <h3>Journal</h3>
+        <p className="muted">Capture thoughts and reflections.</p>
+        <div style={{ marginTop: 8 }}>
+          <a href="/journal"><button>Open Journal</button></a>
+        </div>
+      </div>
+    );
+  }
+
+  // -------- Full page behavior (unchanged) --------
   const [items, setItems] = useState([]);
   const [entry, setEntry] = useState('');
 
@@ -24,23 +39,25 @@ export default function JournalCard() {
   return (
     <div className="card">
       <h3>Journal</h3>
-      <textarea
-        rows={4}
-        style={{ width: '100%', marginBottom: 8 }}
-        value={entry}
-        onChange={e => setEntry(e.target.value)}
-        placeholder="Write your thoughts…"
-      />
-      <button onClick={add}>Save Entry</button>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <textarea
+          rows={4}
+          style={{ flex: 1, paddingTop: 12, paddingBottom: 12, minHeight: 38 }}
+          value={entry}
+          onChange={e => setEntry(e.target.value)}
+          placeholder="Write your thoughts…"
+        />
+        <button onClick={add}>Save Entry</button>
+      </div>
       <ul style={{ marginTop: 12, flex: 1, overflowY: 'auto' }}>
         {items.map(j => (
           <li key={j._id} style={{ marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <small>{new Date(j.entryDate).toLocaleString()}</small>
               <button onClick={() => remove(j._id)}>×</button>
-            </div>
+            </div>                
             <p>{j.content}</p>
-          </li>
+          </li> 
         ))}
       </ul>
     </div>
