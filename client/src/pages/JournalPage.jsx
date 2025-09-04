@@ -16,6 +16,10 @@ export default function JournalPage() {
   const [text, setText] = useState('');
   const editorRef = useRef(null);
 
+  // NEW: list view state & search
+  const [viewMode, setViewMode] = useState('calendar'); // 'calendar' | 'list'
+  const [query, setQuery] = useState('');
+
   useEffect(() => {
     (async () => {
       const data = await getJournalEntries();
@@ -28,6 +32,28 @@ export default function JournalPage() {
     const dStr = selectedDate.toDateString();
     return allEntries.filter(e => new Date(e.entryDate).toDateString() === dStr);
   }, [allEntries, selectedDate]);
+
+  // NEW: full list view, with search filtering
+  const filteredAllEntries = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const base = allEntries;
+    if (!q) return base;
+    return base.filter(e => {
+      const content = e.content || '';
+      return content.toLowerCase().includes(q);
+    });
+  }, [allEntries, query]);
+
+  // Helpers
+  const time = (d) =>
+    new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const dateLabel = (d) =>
+    new Date(d).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+  const snippet = (s = '') => (s.length > 120 ? s.slice(0, 120).trim() + '…' : s);
+  const titleFrom = (s = '') => {
+    const firstLine = (s.split('\n')[0] || '').trim();
+    return firstLine || '(Untitled)';
+  };
 
   const openEntry = (e) => {
     setCreating(false);
@@ -72,10 +98,6 @@ export default function JournalPage() {
     if (selectedEntry?._id === id) cancel();
   };
 
-  const time = (d) =>
-    new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const snippet = (s = '') => (s.length > 120 ? s.slice(0, 120).trim() + '…' : s);
-
   return (
     <div className="journal-shell">
       <aside className="journal-left">
@@ -84,29 +106,90 @@ export default function JournalPage() {
           <button className="primary" onClick={startNew}>+ New Entry</button>
         </div>
 
-        <Calendar onChange={setSelectedDate} value={selectedDate} />
-
-        <div className="journal-list-header">
-          <h4>{selectedDate.toDateString()}</h4>
-          <span className="muted">{dayEntries.length} entr{dayEntries.length === 1 ? 'y' : 'ies'}</span>
+        {/* NEW: View toggle */}
+        <div className="journal-view-toggle" style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <button
+            className={viewMode === 'calendar' ? 'seg active' : 'seg'}
+            onClick={() => setViewMode('calendar')}
+          >
+            Calendar
+          </button>
+          <button
+            className={viewMode === 'list' ? 'seg active' : 'seg'}
+            onClick={() => setViewMode('list')}
+          >
+            All entries
+          </button>
         </div>
 
-        <ul className="journal-list">
-          {dayEntries.length === 0 && <li className="empty">No entries for this day.</li>}
-          {dayEntries.map(e => (
-            <li
-              key={e._id}
-              className={'journal-list-item ' + (selectedEntry?._id === e._id ? 'active' : '')}
-              onClick={() => openEntry(e)}
-            >
-              <div className="row">
-                <strong className="title">{snippet(e.content?.split('\n')[0]) || '(Untitled)'}</strong>
-                <span className="time">{time(e.entryDate)}</span>
-              </div>
-              <div className="preview">{snippet(e.content)}</div>
-            </li>
-          ))}
-        </ul>
+        {viewMode === 'calendar' ? (
+          <>
+            <Calendar onChange={setSelectedDate} value={selectedDate} />
+
+            <div className="journal-list-header">
+              <h4>{selectedDate.toDateString()}</h4>
+              <span className="muted">
+                {dayEntries.length} entr{dayEntries.length === 1 ? 'y' : 'ies'}
+              </span>
+            </div>
+
+            <ul className="journal-list">
+              {dayEntries.length === 0 && <li className="empty">No entries for this day.</li>}
+              {dayEntries.map(e => (
+                <li
+                  key={e._id}
+                  className={'journal-list-item ' + (selectedEntry?._id === e._id ? 'active' : '')}
+                  onClick={() => openEntry(e)}
+                >
+                  <div className="row">
+                    <strong className="title">{snippet(titleFrom(e.content))}</strong>
+                    <span className="time">{time(e.entryDate)}</span>
+                  </div>
+                  <div className="preview">{snippet(e.content)}</div>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            {/* NEW: Search bar for list view */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input
+                type="search"
+                placeholder="Search entries…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="journal-search"
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            <div className="journal-list-header">
+              <h4>All Entries</h4>
+              <span className="muted">
+                {filteredAllEntries.length} entr{filteredAllEntries.length === 1 ? 'y' : 'ies'}
+              </span>
+            </div>
+
+            {/* NEW: Flat scrollable list (newest first) */}
+            <ul className="journal-list">
+              {filteredAllEntries.length === 0 && <li className="empty">No entries found.</li>}
+              {filteredAllEntries.map(e => (
+                <li
+                  key={e._id}
+                  className={'journal-list-item ' + (selectedEntry?._id === e._id ? 'active' : '')}
+                  onClick={() => openEntry(e)}
+                >
+                  <div className="row">
+                    <strong className="title">{snippet(titleFrom(e.content))}</strong>
+                    <span className="time">{dateLabel(e.entryDate)} · {time(e.entryDate)}</span>
+                  </div>
+                  <div className="preview">{snippet(e.content)}</div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </aside>
 
       <main className="journal-main">

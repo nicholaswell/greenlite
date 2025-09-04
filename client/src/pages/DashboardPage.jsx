@@ -32,7 +32,7 @@ export default function Dashboard() {
       const now = new Date();
       const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
       setEvents(
-        data.filter(e => {
+        (data || []).filter(e => {
           const d = new Date(e.start).toDateString();
           return d === now.toDateString() || d === tomorrow.toDateString();
         })
@@ -43,7 +43,7 @@ export default function Dashboard() {
     getGoals().then(data => setAllGoals(data || []));
 
     // Pinned notes
-    getNotes().then(data => setNotes(data.filter(n => n.pinned)));
+    getNotes().then(data => setNotes((data || []).filter(n => n.pinned)));
 
     // TODO: If your JobTracker exposes a quick count, set it:
     // getJobsAppliedCount().then(n => setJobsAppliedCount(n));
@@ -61,21 +61,22 @@ export default function Dashboard() {
         <span>{new Date().toLocaleDateString()}</span>
       </header>
 
-      {/* Full-width personal highlights card */}
-      <div className="full-width-card">
-        <WeeklyFavoritesCard title="Weekly Favorites" />
+      {/* NEW: split the top row 50/50 */}
+      <div className="dashboard-split">
+        <section className="panel panel--favorites">
+          <WeeklyFavoritesCard title="Weekly Favorites" />
+        </section>
+
+        <section className="panel panel--completion">
+          <CompletionCard
+            goals={allGoals}
+            jobsAppliedCount={jobsAppliedCount} // leave null for manual input
+            title="This Week – Completion"
+          />
+        </section>
       </div>
 
-      {/* NEW: Completion wheels (full-width or top of grid) */}
-      <div className="full-width-card">
-        <CompletionCard
-          goals={allGoals}
-          jobsAppliedCount={jobsAppliedCount} // leave null for manual input
-          title="This Week – Completion"
-        />
-      </div>
-
-      {/* Regular grid for everything else */}
+      {/* Existing grid for everything else */}
       <div className="cards-grid">
         <EventsCard items={events} />
         <GoalsCard  items={incompleteGoals} />
