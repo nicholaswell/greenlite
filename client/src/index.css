@@ -21,6 +21,7 @@
 
 
 
+
 /* Include padding/border in element width everywhere */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -35,6 +36,16 @@ html, body {
   transition: background .3s, color .3s;
 }
 
+
+body.dark {
+  position: relative;
+  background: url('/greenlite-background.png') no-repeat center center fixed;
+  background-size: cover;
+}
+
+
+
+
 /* Light theme tokens */
 body.light {
   background: #f4f6fa;
@@ -47,7 +58,6 @@ body.light {
 
 /* Dark theme tokens */
 body.dark {
-  background: #171717;
   color: #e9eef7;
   --g1: 18 85% 32%;
   --g2: 334 70% 30%;
@@ -125,7 +135,7 @@ body.dark .sidebar {
   border-right: 1px solid rgba(255, 255, 255, .12);
 }
 
-.sidebar-header h1 { margin: 10px 0 4px; letter-spacing: .5px; font-weight: 800; font-family: 'BankGothic'; }
+.sidebar-header h1 { margin: 10px 0 4px; letter-spacing: .5px; font-weight: 800; font-family: 'BankGothic'; font-size: 1.6rem;}
 .sidebar-header p { margin: 0; font-size: 12px; color: #6b7280; }
 body.dark .sidebar-header p { color: #99a7be; }
 
@@ -466,17 +476,30 @@ body.dark .card {
    ========================================================================== */
 input, textarea {
   border: 1px solid rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0);
+  background: rgba(0, 0, 0, 0.406);
   color: inherit;
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 14px;
   height: 38px;
   line-height: 1.2;
-  backdrop-filter: blur(6px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(50%);
   transition: background .3s, border-color .3s, box-shadow .3s;
 }
-textarea { height: auto; min-height: 96px; }
+
+
+
+
+/* native checkbox look, no black box */
+input[type="checkbox"],
+input[type="checkbox"].checkbox-input {
+  background: transparent !important;
+  border: none;
+  padding: 0;
+  height: auto;
+  width: 18px;         /* optional sizing */
+  accent-color: #22c55e; /* optional brand color */
+}
 
 button {
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -510,6 +533,7 @@ button.danger  { border-color: #ef4444; background: #ef4444; color: #fff; }
   backdrop-filter: blur(6px) saturate(110%);
   transition: background .3s, border .3s, color .3s;
 }
+
 
 /* Light-mode color fixes (no white text) */
 body.light .fc {
@@ -551,6 +575,22 @@ body.light .fc .fc-daygrid-day-frame { padding: 4px; }
   .fc .fc-toolbar { flex-wrap: wrap; gap: 6px; }
   .fc .fc-toolbar-title { font-size: 1.1rem; }
   .fc .fc-list-event-title, .fc .fc-list-event-time { font-size: .95rem; }
+
+  body.light .fc .fc-list-day-text { 
+  color: #1f2937 !important;   /* dark gray text */
+}
+
+/* If your global link styles are interfering, neutralize inside FC */
+.fc a { color: inherit; }
+
+/* Optional: ensure the list-day heading background contrasts in both themes */
+body.light .fc .fc-list-day-cushion { background: #f5f6fa; }   /* light gray */
+body.dark  .fc .fc-list-day-cushion { background: #151a22; }   /* dark */
+body.dark  .fc .fc-list-day-text    { color: #e5e7eb !important; }
+}
+
+body.dark .fc .fc-col-header .fc-col-header-cell .fc-col-header-cell-cushion {
+  color: #000000 !important;
 }
 
 /* ==========================================================================
@@ -579,16 +619,22 @@ body.light .fc .fc-daygrid-day-frame { padding: 4px; }
   overflow: auto; flex: 1; border-radius: 10px;
 }
 
+
 .journal-list-item {
   padding: 10px 12px; border-radius: 10px; cursor: pointer; margin: 4px 0; transition: background .15s ease;
 }
-.journal-list-item:hover { background: #f5f6f7; }
-.journal-list-item.active { background: #eaf3ff; }
+.journal-list-item:hover { background: #f5f6f7; color: black; }
+.journal-list-item.active { background: #eaf3ff; color: black; }
+
+.journal-list-item:hover .preview{ color: black;}
+.journal-list-item:active .preview{color: black;}
+
+
 
 .journal-list-item .row { display: flex; justify-content: space-between; gap: 8px; }
 .journal-list-item .title { font-weight: 600; }
-.journal-list-item .time, .muted { color: #6b7280; font-size: 12px; }
-.journal-list-item .preview { color: #374151; font-size: 13px; margin-top: 4px; line-height: 1.35; }
+.journal-list-item .time, .muted { color: #ffffff; font-size: 12px; }
+.journal-list-item .preview { font-size: 13px; margin-top: 4px; line-height: 1.35; }
 .empty { color: #6b7280; padding: 12px; }
 
 /* Main pane */
@@ -598,10 +644,15 @@ body.light .fc .fc-daygrid-day-frame { padding: 4px; }
 .journal-editor {
   width: 100%; height: 100%;
   resize: none; border: none; outline: none;
-  padding: 16px 0;
   font-size: 16px; line-height: 1.5;
-  background: transparent;
+    /* give all sides padding */
+  padding: 20px;            /* was 20px 0 */
+  font-size: 16px;
+  line-height: 1.5;
 }
+
+
+
 
 /* Responsive for Journal */
 @media (max-width: 900px) {
@@ -902,4 +953,60 @@ body.dark .react-calendar__month-view__lines { border-color: #262a33; }
 
 @media (max-width: 720px) {
   .mini-add { grid-template-columns: 1fr; }
+}
+
+
+/* ===== Mobile polish: container + cards grid ===== */
+@media (max-width: 680px) {
+  .main-content { padding: 14px 12px; }               /* less side padding */
+  .cards-grid { grid-template-columns: 1fr; }         /* avoid 320px overflow */
+  .dashboard-header h2 { font-size: 2.2rem; }         /* friendlier heading size */
+}
+
+/* ===== Jobs page ===== */
+@media (max-width: 720px) {
+  .jobs-wrap { padding: 0 10px; }
+  .jobs-header { flex-wrap: wrap; align-items: stretch; gap: 10px; }
+  .jobs-header .row, .jobs-header .seg-group { width: 100%; }
+  .search { width: 100%; min-width: 0; }              /* was min-width: 220px */
+  .job-card { flex-direction: column; padding: 10px; } /* ensure wrap (reinforce) */
+  .job-actions { justify-content: flex-start; }
+  .meta { flex-wrap: wrap; }
+}
+
+/* ===== Goals page ===== */
+@media (max-width: 720px) {
+  .goals-wrap { padding: 0 10px; }
+  .goals-header { flex-wrap: wrap; align-items: stretch; gap: 10px; }
+  .goals-header .row, .goals-header .seg-group { width: 100%; }
+  .goal-row { grid-template-columns: auto 1fr auto; }  /* already set; ensure min-widths don't fight */
+  .goal-title { min-width: 0; }                        /* allow title to shrink */
+  .due { flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+  .date { padding: 6px 8px; }                          /* slightly tighter */
+  .chip { white-space: nowrap; }                       /* prevent tiny wrap spam */
+}
+
+@media (max-width: 600px) {
+  .goal-row { grid-template-columns: auto 1fr; }       /* drop one trailing column */
+}
+
+@media (max-width: 480px) {
+  /* Stack everything cleanly on very small phones */
+  .goal-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+    row-gap: 8px;
+  }
+  .tick { order: 0; }
+  .goal-title { order: 1; width: 100%; }
+  .due { order: 2; width: 100%; justify-content: space-between; }
+  .goal-row .ghost { order: 3; width: 100%; }          /* Delete button full-width */
+}
+
+/* ===== General safety for images/SVG in tight spaces ===== */
+img, svg { max-width: 100%; height: auto; }
+
+/* ===== Bottom nav safety space (already have margin-bottom:100px) ===== */
+@media (max-width: 800px) {
+  .main-content { margin-left: 0; margin-bottom: 84px; } /* keep content above 60px nav */
 }
