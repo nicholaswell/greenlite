@@ -22,8 +22,8 @@ dotenv.config();
 const app = express();
 
 // --- middleware ---
-app.use(cors());                 // if your client is on another origin, configure: cors({ origin: 'http://localhost:5173' })
-app.use(express.json());         // for JSON bodies on CRUD + features PUT
+app.use(cors());                 // configure origin if your client is elsewhere
+app.use(express.json());         // JSON bodies
 
 // --- DB connect ---
 mongoose
@@ -49,9 +49,6 @@ const upload = multer({
 });
 
 // ========== ONE-PHOTO endpoints ==========
-
-// POST /api/features/photo  (form-data; field name: "photo")
-// Upload/replace the single stored photo
 app.post('/api/features/photo', upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -66,7 +63,6 @@ app.post('/api/features/photo', upload.single('photo'), async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // return a cache-busted URL you can put directly into <img src="...">
     res.json({ ok: true, url: `/api/features/photo/raw?ts=${Date.now()}` });
   } catch (e) {
     console.error(e);
@@ -74,8 +70,6 @@ app.post('/api/features/photo', upload.single('photo'), async (req, res) => {
   }
 });
 
-// GET /api/features/photo/raw
-// Serve the raw image bytes (for <img src> / lightbox)
 app.get('/api/features/photo/raw', async (_req, res) => {
   try {
     const doc = await PhotoDoc.findById('photo').lean();
@@ -90,8 +84,6 @@ app.get('/api/features/photo/raw', async (_req, res) => {
   }
 });
 
-// GET /api/features/photo/meta
-// Quick existence/updatedAt check (optional helper)
 app.get('/api/features/photo/meta', async (_req, res) => {
   try {
     const doc = await PhotoDoc.findById('photo').select('_id updatedAt').lean();
@@ -102,7 +94,13 @@ app.get('/api/features/photo/meta', async (_req, res) => {
 });
 
 // ========== generic CRUD helper ==========
-function mountCrud(path, Model) {
+// Allows optional whitelist+coercion per resource and supports PATCH.
+function mountCrud(path, Model, options = {}) {
+  const {
+    sanitizeCreate, // (body) => doc
+    sanitizeUpdate, // (body) => $set doc
+  } = options;
+
   // List all
   app.get(`/api/${path}`, async (_req, res) => {
     try {
@@ -112,26 +110,51 @@ function mountCrud(path, Model) {
       res.status(500).json({ error: e.message });
     }
   });
+
   // Create
   app.post(`/api/${path}`, async (req, res) => {
     try {
-      const item = new Model(req.body);
+      const doc = sanitizeCreate ? sanitizeCreate(req.body) : req.body;
+      const item = new Model(doc);
       await item.save();
       res.status(201).json(item);
     } catch (e) {
       res.status(400).json({ error: e.message });
     }
   });
-  // Update
+
+  // Update (PUT: idempotent, but we still do $set to avoid replacement)
   app.put(`/api/${path}/:id`, async (req, res) => {
     try {
-      const updated = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      const $set = sanitizeUpdate ? sanitizeUpdate(req.body) : req.body;
+      const updated = await Model.findByIdAndUpdate(
+        req.params.id,
+        { $set },
+        { new: true, runValidators: true }
+      );
       if (!updated) return res.sendStatus(404);
       res.json(updated);
     } catch (e) {
       res.status(400).json({ error: e.message });
     }
   });
+
+  // Partial update (PATCH)
+  app.patch(`/api/${path}/:id`, async (req, res) => {
+    try {
+      const $set = sanitizeUpdate ? sanitizeUpdate(req.body) : req.body;
+      const updated = await Model.findByIdAndUpdate(
+        req.params.id,
+        { $set },
+        { new: true, runValidators: true }
+      );
+      if (!updated) return res.sendStatus(404);
+      res.json(updated);
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
   // Delete
   app.delete(`/api/${path}/:id`, async (req, res) => {
     try {
@@ -145,14 +168,47 @@ function mountCrud(path, Model) {
 }
 
 // --- Mount your existing resources ---
+// Basic models that don't need special coercion/whitelisting:
 mountCrud('events',  Event);
 mountCrud('journal', Journal);
-mountCrud('goals',   Goal);
 mountCrud('jobs',    Job);
 mountCrud('notes',   Note);
 
-// --- Weekly Features (custom endpoints) ---
+// Goals: whitelist + coerce dueDate (Date) and target (Number)
+const pick = (obj, keys) =>
+  Object.fromEntries(Object.entries(obj || {}).filter(([k]) => keys.includes(k)));
 
+function coerceGoal(body) {
+  const allowed = pick(body, ['title', 'dueDate', 'completed', 'target']);
+  if ('dueDate' in allowed && allowed.dueDate) {
+    const d = new Date(allowed.dueDate);
+    if (!isNaN(d)) allowed.dueDate = d;
+    else delete allowed.dueDate;
+  }
+  if ('target' in allowed) {
+    if (allowed.target === null || allowed.target === '' || typeof allowed.target === 'undefined') {
+      allowed.target = null;
+    } else {
+      const n = Number(allowed.target);
+      if (Number.isNaN(n)) delete allowed.target;
+      else allowed.target = n;
+    }
+  }
+  if ('completed' in allowed) {
+    allowed.completed = !!allowed.completed;
+  }
+  if ('title' in allowed && typeof allowed.title === 'string') {
+    allowed.title = allowed.title.trim();
+  }
+  return allowed;
+}
+
+mountCrud('goals', Goal, {
+  sanitizeCreate: coerceGoal,
+  sanitizeUpdate: coerceGoal,
+});
+
+// --- Weekly Features (custom endpoints) ---
 // GET current week for a kind (recipe|photo|song|watch|read)
 app.get('/api/features/:kind/current', async (req, res) => {
   try {

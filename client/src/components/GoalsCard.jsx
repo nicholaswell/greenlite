@@ -4,7 +4,7 @@ import { getGoals, createGoal, updateGoal, deleteGoal } from '../api/goals';
 export default function GoalsCard() {
   const [items, setItems] = useState([]);
   const [title, setTitle] = useState('');
-  const [due,   setDue]   = useState('');
+  const [due, setDue] = useState('');
 
   useEffect(() => {
     getGoals().then(setItems);
@@ -15,25 +15,43 @@ export default function GoalsCard() {
     const payload = { title, dueDate: due || null };
     const newGoal = await createGoal(payload);
     setItems([newGoal, ...items]);
-    setTitle(''); setDue('');
+    setTitle('');
+    setDue('');
   };
 
   const toggle = async (goal) => {
     const updated = await updateGoal(goal._id, { completed: !goal.completed });
-    setItems(items.map(g => g._id === updated._id ? updated : g));
+    setItems(items.map((g) => (g._id === updated._id ? updated : g)));
   };
 
   const remove = async (id) => {
     await deleteGoal(id);
-    setItems(items.filter(g => g._id !== id));
+    setItems(items.filter((g) => g._id !== id));
   };
 
   return (
     <div className="card">
       <h3>Goals</h3>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, flex: 1, overflowY: 'auto' }}>
-        {items.map(g => (
-          <li key={g._id} style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+      <ul
+        style={{
+          listStyle: 'none',
+          padding: 0,
+          margin: 0,
+          flex: 1,
+          overflowY: 'auto',
+        }}
+      >
+        {items.map((g) => (
+          <li
+            key={g._id}
+            style={{
+              marginBottom: 12,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <input
                 type="checkbox"
@@ -51,17 +69,22 @@ export default function GoalsCard() {
           </li>
         ))}
       </ul>
+
       <input
         value={title}
-        onChange={e => setTitle(e.target.value)}
+        onChange={(e) => setTitle(e.target.value)}
         placeholder="New goal…"
       />
+
       <input
         type="date"
         value={due}
-        onChange={e => setDue(e.target.value)}
+        onChange={(e) => setDue(e.target.value)}
       />
-      <button style={{ marginTop: 8 }} onClick={add}>Add Goal</button>
+
+      <button style={{ marginTop: 8 }} onClick={add}>
+        Add Goal
+      </button>
     </div>
   );
 }

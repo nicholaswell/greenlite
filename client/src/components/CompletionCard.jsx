@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { getCurrentFeature, upsertCurrentFeature } from '../api/features';
 
 function Donut({ size = 140, value = 0, target = 1, label = '' }) {
   const safeTarget = Math.max(1, Number(target) || 1);
@@ -54,16 +55,70 @@ function Donut({ size = 140, value = 0, target = 1, label = '' }) {
   );
 }
 
+const clampNonNegInt = (v, fallback = 0) => {
+  const n = Number(v);
+  if (Number.isNaN(n)) return fallback;
+  return Math.max(0, Math.round(n));
+};
+
 export default function CompletionCard({
   goals = [],
   jobsAppliedCount = null,   // if null, user can input
   title = 'This Week – Completion',
 }) {
   const completedGoals = useMemo(() => goals.filter(g => g.completed).length, [goals]);
-  const [goalTarget, setGoalTarget] = useState(Math.max(completedGoals || 0, 5));
 
+  const [goalTarget, setGoalTarget] = useState(5);
   const [jobsDone, setJobsDone] = useState(jobsAppliedCount ?? 0);
-  const [jobsTarget, setJobsTarget] = useState(Math.max(jobsDone || 0, 5));
+  const [jobsTarget, setJobsTarget] = useState(5);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load saved targets for this week (kind: "completion")
+  useEffect(() => {
+    (async () => {
+      try {
+        const doc = await getCurrentFeature('completion'); // { payload }
+        const p = doc?.payload || null;
+
+        if (p) {
+          setGoalTarget(clampNonNegInt(p.goalTarget, Math.max(completedGoals || 0, 5)));
+          setJobsTarget(clampNonNegInt(p.jobsTarget, Math.max((jobsAppliedCount ?? 0), 5)));
+          if (jobsAppliedCount == null && typeof p.jobsDoneManual === 'number') {
+            setJobsDone(clampNonNegInt(p.jobsDoneManual, 0));
+          }
+        } else {
+          // sensible defaults if nothing saved yet this week
+          setGoalTarget(Math.max(completedGoals || 0, 5));
+          setJobsTarget(Math.max((jobsAppliedCount ?? 0), 5));
+        }
+      } finally {
+        setLoaded(true);
+      }
+    })();
+    // We only want to run once on mount to establish initial values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced save whenever values change (after initial load)
+  const saveTimer = useRef(null);
+  useEffect(() => {
+    if (!loaded) return;
+
+    const payload = {
+      goalTarget: clampNonNegInt(goalTarget, 0),
+      jobsTarget: clampNonNegInt(jobsTarget, 0),
+      // only persist manual jobsDone when it's not coming from props
+      ...(jobsAppliedCount == null ? { jobsDoneManual: clampNonNegInt(jobsDone, 0) } : {}),
+      timestamp: Date.now(),
+    };
+
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      upsertCurrentFeature('completion', payload).catch(() => {});
+    }, 400);
+
+    return () => clearTimeout(saveTimer.current);
+  }, [goalTarget, jobsTarget, jobsDone, jobsAppliedCount, loaded]);
 
   return (
     <div className="card completion-card">
@@ -82,7 +137,7 @@ export default function CompletionCard({
                   type="number"
                   min={0}
                   value={goalTarget}
-                  onChange={(e) => setGoalTarget(Number(e.target.value))}
+                  onChange={(e) => setGoalTarget(clampNonNegInt(e.target.value, 0))}
                   inputMode="numeric"
                 />
               </label>
@@ -103,7 +158,7 @@ export default function CompletionCard({
                   type="number"
                   min={0}
                   value={jobsTarget}
-                  onChange={(e) => setJobsTarget(Number(e.target.value))}
+                  onChange={(e) => setJobsTarget(clampNonNegInt(e.target.value, 0))}
                   inputMode="numeric"
                 />
               </label>
@@ -116,7 +171,7 @@ export default function CompletionCard({
                     type="number"
                     min={0}
                     value={jobsDone}
-                    onChange={(e) => setJobsDone(Number(e.target.value))}
+                    onChange={(e) => setJobsDone(clampNonNegInt(e.target.value, 0))}
                     inputMode="numeric"
                   />
                 </label>
